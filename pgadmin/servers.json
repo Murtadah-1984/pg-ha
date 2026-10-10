@@ -1,0 +1,11 @@
+{
+  "Servers": {
+    "1": { "Group": "pg-ha", "Name": "Primary (rw via HAProxy)",  "Host": "haproxy",   "Port": 5000, "MaintenanceDB": "postgres", "Username": "postgres", "SSLMode": "prefer" },
+    "2": { "Group": "pg-ha", "Name": "Replicas (ro via HAProxy)", "Host": "haproxy",   "Port": 5001, "MaintenanceDB": "postgres", "Username": "postgres", "SSLMode": "prefer" },
+    "3": { "Group": "pg-ha", "Name": "PgBouncer pool",            "Host": "pgbouncer", "Port": 6432, "MaintenanceDB": "appdb",    "Username": "app",      "SSLMode": "disable" },
+    "4": { "Group": "pg-ha nodes", "Name": "pg-1", "Host": "pg-1", "Port": 5432, "MaintenanceDB": "postgres", "Username": "postgres", "SSLMode": "prefer" },
+    "5": { "Group": "pg-ha nodes", "Name": "pg-2", "Host": "pg-2", "Port": 5432, "MaintenanceDB": "postgres", "Username": "postgres", "SSLMode": "prefer" },
+    "6": { "Group": "pg-ha nodes", "Name": "pg-3", "Host": "pg-3", "Port": 5432, "MaintenanceDB": "postgres", "Username": "postgres", "SSLMode": "prefer" }
+  }
+}
+

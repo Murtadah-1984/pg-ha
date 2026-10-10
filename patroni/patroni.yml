@@ -1,0 +1,80 @@
+# Shared by every node. Node-specific values (name, addresses) and all
+# passwords come from PATRONI_* environment variables in docker-compose.yml.
+namespace: /service/
+
+restapi:
+  listen: 0.0.0.0:8008
+
+bootstrap:
+  # Cluster-wide settings, written to etcd once on first boot.
+  # Change later with:  docker compose exec pg-1 patronictl -c /etc/patroni/patroni.yml edit-config
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576      # 1 MB: lagging replicas can't be promoted
+    failsafe_mode: true                   # primary keeps running if etcd briefly vanishes
+    synchronous_mode: true                # zero data loss on failover...
+    synchronous_mode_strict: false        # ...but writes don't block if all replicas are down
+    synchronous_node_count: 1
+    postgresql:
+      use_pg_rewind: true                 # old primary rejoins as replica automatically
+      use_slots: true                     # replication slots, managed by Patroni
+      parameters:
+        max_connections: 300
+        shared_buffers: 512MB
+        effective_cache_size: 1536MB
+        maintenance_work_mem: 256MB       # helps pgvector HNSW/IVFFlat index builds
+        work_mem: 16MB
+        wal_level: replica
+        hot_standby: "on"
+        wal_log_hints: "on"
+        wal_keep_size: 1GB
+        max_wal_senders: 10
+        max_replication_slots: 10
+        max_wal_size: 2GB
+        min_wal_size: 512MB
+        checkpoint_completion_target: 0.9
+        hot_standby_feedback: "on"
+        password_encryption: scram-sha-256
+        shared_preload_libraries: pg_stat_statements
+        pg_stat_statements.track: all
+        log_min_duration_statement: 500
+        log_checkpoints: "on"
+        log_lock_waits: "on"
+
+  initdb:
+    - encoding: UTF8
+    - locale: C.UTF-8
+    - data-checksums
+
+  # Runs once on the very first primary: creates the app DB, user and pgvector.
+  post_init: /usr/local/bin/post-init.sh
+
+postgresql:
+  listen: 0.0.0.0:5432
+  data_dir: /var/lib/postgresql/data/pgdata
+  bin_dir: /usr/lib/postgresql/17/bin
+  pgpass: /tmp/pgpass
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+  pg_hba:
+    - local   all          all                       trust
+    - host    replication  replicator  0.0.0.0/0     scram-sha-256
+    - host    all          all         127.0.0.1/32  scram-sha-256
+    - host    all          all         0.0.0.0/0     scram-sha-256
+  create_replica_methods:
+    - basebackup
+  basebackup:
+    checkpoint: fast
+    max-rate: 200M
+
+watchdog:
+  mode: "off"          # no /dev/watchdog inside containers
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
+
